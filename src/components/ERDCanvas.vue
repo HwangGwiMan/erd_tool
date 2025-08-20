@@ -48,10 +48,28 @@ const handleCanvasMouseMove = (event: MouseEvent) => {
     
     lastPanPosition.value = { x: event.clientX, y: event.clientY }
   }
+  // 연결 모드 중이면 커서 좌표 업데이트 (뷰박스 좌표계 기준)
+  if (erdStore.isConnecting) {
+    const pt = svgCanvas.value?.createSVGPoint()
+    if (pt && svgCanvas.value) {
+      pt.x = event.clientX
+      pt.y = event.clientY
+      const ctm = svgCanvas.value.getScreenCTM()
+      if (ctm) {
+        const inv = ctm.inverse()
+        const svgP = pt.matrixTransform(inv)
+        erdStore.updateConnectCursor({ x: svgP.x, y: svgP.y })
+      }
+    }
+  }
 }
 
 const handleCanvasMouseUp = () => {
   isPanning.value = false
+  // 캔버스에서 놓으면 연결 취소
+  if (erdStore.isConnecting) {
+    erdStore.cancelConnect()
+  }
 }
 
 // 휠 이벤트로 줌 처리
@@ -62,6 +80,13 @@ const handleWheel = (event: WheelEvent) => {
     erdStore.zoomIn()
   } else {
     erdStore.zoomOut()
+  }
+}
+
+// 키보드 처리 (ESC로 연결 취소)
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && erdStore.isConnecting) {
+    erdStore.cancelConnect()
   }
 }
 
@@ -87,6 +112,7 @@ const updateCanvasSize = () => {
 onMounted(() => {
   updateCanvasSize()
   window.addEventListener('resize', updateCanvasSize)
+  window.addEventListener('keydown', handleKeyDown)
   
   // 전역 마우스 업 이벤트 (캔버스 밖에서 마우스를 놓았을 때)
   document.addEventListener('mouseup', handleCanvasMouseUp)
@@ -94,6 +120,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateCanvasSize)
+  window.removeEventListener('keydown', handleKeyDown)
   document.removeEventListener('mouseup', handleCanvasMouseUp)
 })
 </script>
@@ -144,10 +171,32 @@ onUnmounted(() => {
             <path
               :d="`M ${erdStore.canvas.gridSize} 0 L 0 0 0 ${erdStore.canvas.gridSize}`"
               fill="none"
-              stroke="#e0e0e0"
+              stroke="#e9ecef"
               stroke-width="1"
             />
           </pattern>
+
+          <!-- 관계선 화살표 마커 정의 -->
+          <marker id="arrow-default" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L10,3 L0,6 Z" fill="#90a4ae" />
+          </marker>
+          <marker id="arrow-one-to-one" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L10,3 L0,6 Z" fill="#90a4ae" />
+          </marker>
+          <marker id="arrow-one-to-many" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L10,3 L0,6 Z" fill="#90a4ae" />
+          </marker>
+          <marker id="arrow-many-to-one" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L10,3 L0,6 Z" fill="#90a4ae" />
+          </marker>
+          <marker id="arrow-many-to-many" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L10,3 L0,6 Z" fill="#90a4ae" />
+          </marker>
+
+          <!-- 관계선 그림자 -->
+          <filter id="line-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.15" />
+          </filter>
         </defs>
         
         <rect
@@ -166,6 +215,17 @@ onUnmounted(() => {
             :from-table="erdStore.getTableById(relationship.fromTableId)"
             :to-table="erdStore.getTableById(relationship.toTableId)"
             @select="erdStore.selectRelationship(relationship.id)"
+          />
+          <!-- 연결 모드 임시선 -->
+          <line
+            v-if="erdStore.isConnecting && erdStore.connectFrom"
+            :x1="(erdStore.getTableById(erdStore.connectFrom.tableId)?.position.x ?? 0) + (erdStore.getTableById(erdStore.connectFrom.tableId)?.size.width ?? 0) - 6"
+            :y1="erdStore.getColumnCenterY(erdStore.connectFrom.tableId, erdStore.connectFrom.columnId) ?? 0"
+            :x2="erdStore.connectCursor.x"
+            :y2="erdStore.connectCursor.y"
+            stroke="#2196f3"
+            stroke-dasharray="4 4"
+            stroke-width="2"
           />
         </g>
 

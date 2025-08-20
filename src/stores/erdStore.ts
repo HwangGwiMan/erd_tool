@@ -6,9 +6,9 @@ import type {
   Column, 
   Relationship, 
   CanvasSettings, 
-  Position,
-  RelationshipType 
+  Position
 } from '@/types/erd'
+import { RelationshipType } from '@/types/erd'
 
 export const useERDStore = defineStore('erd', () => {
   // 레이아웃 관련 상수 (TableNode와 동기화 필요)
@@ -28,6 +28,11 @@ export const useERDStore = defineStore('erd', () => {
   const relationships = ref<Relationship[]>([])
   const selectedTableId = ref<string | null>(null)
   const selectedRelationshipId = ref<string | null>(null)
+  
+  // 연결 모드 상태
+  const isConnecting = ref(false)
+  const connectFrom = ref<{ tableId: string; columnId: string } | null>(null)
+  const connectCursor = ref<Position>({ x: 0, y: 0 })
   
   const canvas = ref<CanvasSettings>({
     zoom: 1,
@@ -211,6 +216,54 @@ export const useERDStore = defineStore('erd', () => {
   const getRelationshipsByTableId = (tableId: string) => 
     relationships.value.filter(rel => rel.fromTableId === tableId || rel.toTableId === tableId)
 
+  // 연결 모드 액션
+  const startConnect = (fromTableId: string, fromColumnId: string) => {
+    isConnecting.value = true
+    connectFrom.value = { tableId: fromTableId, columnId: fromColumnId }
+  }
+
+  const updateConnectCursor = (position: Position) => {
+    connectCursor.value = position
+  }
+
+  const cancelConnect = () => {
+    isConnecting.value = false
+    connectFrom.value = null
+  }
+
+  const completeConnect = (toTableId: string, toColumnId: string) => {
+    if (!isConnecting.value || !connectFrom.value) return null
+    const from = connectFrom.value
+    const relationship = addRelationship(
+      from.tableId,
+      toTableId,
+      from.columnId,
+      toColumnId,
+      RelationshipType.ONE_TO_MANY
+    )
+    // 연결 종료 및 방금 생성된 관계 선택
+    isConnecting.value = false
+    connectFrom.value = null
+    selectedRelationshipId.value = relationship.id
+    selectedTableId.value = null
+    return relationship
+  }
+
+  // 컬럼 유틸리티
+  const getColumnIndex = (tableId: string, columnId: string) => {
+    const table = getTableById(tableId)
+    if (!table) return -1
+    return table.columns.findIndex(c => c.id === columnId)
+  }
+
+  const getColumnCenterY = (tableId: string, columnId: string) => {
+    const table = getTableById(tableId)
+    if (!table) return null
+    const index = getColumnIndex(tableId, columnId)
+    if (index < 0) return null
+    return table.position.y + headerHeight + index * rowHeight + rowHeight / 2
+  }
+
   return {
     // 상태
     tables,
@@ -241,6 +294,17 @@ export const useERDStore = defineStore('erd', () => {
     selectRelationship,
     clearSelection,
     getTableById,
-    getRelationshipsByTableId
+    getRelationshipsByTableId,
+    getColumnIndex,
+    getColumnCenterY
+    ,
+    // 연결 모드 공개 API
+    isConnecting,
+    connectFrom,
+    connectCursor,
+    startConnect,
+    updateConnectCursor,
+    cancelConnect,
+    completeConnect
   }
 })

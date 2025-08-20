@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Table, Position } from '@/types/erd'
+import { useERDStore } from '@/stores/erdStore'
 
 interface Props {
   table: Table
@@ -19,6 +20,22 @@ const emit = defineEmits<Emits>()
 const headerHeight = 32
 const rowHeight = 24
 const hoveredColumnId = ref<string | null>(null)
+
+// 연결 핸들 클릭/드래그 시작
+const erdStore = useERDStore()
+const startConnect = (event: MouseEvent, columnId: string) => {
+  event.stopPropagation()
+  event.preventDefault()
+  erdStore.startConnect(props.table.id, columnId)
+}
+
+// 연결 완료 시도 (드랍 대상이 컬럼 행일 때 호출)
+const completeConnectHere = (event: MouseEvent, columnId: string) => {
+  if (!erdStore.isConnecting) return
+  event.stopPropagation()
+  event.preventDefault()
+  erdStore.completeConnect(props.table.id, columnId)
+}
 
 const isDragging = ref(false)
 const isResizing = ref(false)
@@ -175,6 +192,7 @@ const handleResizeEnd = () => {
           class="column-background"
           @mouseenter="hoveredColumnId = column.id"
           @mouseleave="hoveredColumnId = null"
+          @mouseup="completeConnectHere($event, column.id)"
         />
 
         <!-- PK 아이콘 -->
@@ -225,6 +243,15 @@ const handleResizeEnd = () => {
           {{ column.type }}
         </text>
 
+        <!-- 연결 핸들 -->
+        <circle
+          :cx="table.position.x + table.size.width - 6"
+          :cy="table.position.y + headerHeight + index * rowHeight + rowHeight / 2"
+          r="4"
+          class="connect-handle"
+          @mousedown="startConnect($event, column.id)"
+        />
+
         <!-- 컬럼 구분선 -->
         <line
           v-if="index < table.columns.length - 1"
@@ -262,19 +289,22 @@ const handleResizeEnd = () => {
 }
 
 .table-title {
-  font-size: 14px;
-  font-weight: bold;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .column-name {
   font-size: 12px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  letter-spacing: 0.1px;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .column-type {
   font-size: 11px;
-  font-family: 'Courier New', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  fill: #7a8894;
 }
 .table-node, .table-node * {
   -webkit-user-select: none;
@@ -289,7 +319,7 @@ const handleResizeEnd = () => {
 }
 
 .column-background:hover {
-  fill: #f0f8ff;
+  fill: #eef7ff;
 }
 
 .resize-handle {
@@ -298,5 +328,14 @@ const handleResizeEnd = () => {
 
 .resize-handle:hover {
   fill: #1976d2;
+}
+
+.connect-handle {
+  fill: #c7d3dd;
+  cursor: crosshair;
+}
+
+.column-row:hover .connect-handle {
+  fill: #2196f3;
 }
 </style>
