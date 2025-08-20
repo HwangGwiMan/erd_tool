@@ -11,6 +11,18 @@ import type {
 } from '@/types/erd'
 
 export const useERDStore = defineStore('erd', () => {
+  // 레이아웃 관련 상수 (TableNode와 동기화 필요)
+  const headerHeight = 32
+  const rowHeight = 24
+
+  // 컬럼 수에 따른 최소 테이블 높이 보장 (자동 증가만, 축소하지 않음)
+  const ensureTableHeightFitsColumns = (table: Table) => {
+    const minHeight = headerHeight + table.columns.length * rowHeight
+    if (table.size.height < minHeight) {
+      table.size.height = minHeight
+    }
+  }
+
   // 상태
   const tables = ref<Table[]>([])
   const relationships = ref<Relationship[]>([])
@@ -52,6 +64,8 @@ export const useERDStore = defineStore('erd', () => {
         }
       ]
     }
+    // 초기 크기도 컬럼 수에 맞춰 최소 높이 보장
+    ensureTableHeightFitsColumns(newTable)
     tables.value.push(newTable)
     return newTable
   }
@@ -59,7 +73,13 @@ export const useERDStore = defineStore('erd', () => {
   const updateTable = (tableId: string, updates: Partial<Table>) => {
     const index = tables.value.findIndex(table => table.id === tableId)
     if (index !== -1) {
-      tables.value[index] = { ...tables.value[index], ...updates }
+      const current = tables.value[index]
+      const next: Table = { ...current, ...updates }
+      if (updates.size && typeof updates.size.height === 'number') {
+        const minHeight = headerHeight + next.columns.length * rowHeight
+        next.size = { ...next.size, height: Math.max(updates.size.height, minHeight) }
+      }
+      tables.value[index] = next
     }
   }
 
@@ -95,6 +115,8 @@ export const useERDStore = defineStore('erd', () => {
         isNotNull: false
       }
       table.columns.push(newColumn)
+      // 컬럼 추가 시 높이 자동 보정 (오버플로우 방지)
+      ensureTableHeightFitsColumns(table)
     }
   }
 
@@ -117,6 +139,9 @@ export const useERDStore = defineStore('erd', () => {
       relationships.value = relationships.value.filter(
         rel => rel.fromColumnId !== columnId && rel.toColumnId !== columnId
       )
+
+      // 컬럼 삭제 후에도 현재 높이가 너무 작지 않도록 보정 (자동 축소는 하지 않음)
+      ensureTableHeightFitsColumns(table)
     }
   }
 

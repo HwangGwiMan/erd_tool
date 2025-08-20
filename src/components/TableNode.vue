@@ -34,6 +34,7 @@ const tableHeight = computed(() => {
 // 마우스 다운 핸들링
 const handleMouseDown = (event: MouseEvent) => {
   event.stopPropagation()
+  event.preventDefault()
   emit('select', props.table.id)
   
   if (!isResizing.value) {
@@ -71,6 +72,7 @@ const handleDragEnd = () => {
 // 리사이즈 시작
 const handleResizeStart = (event: MouseEvent) => {
   event.stopPropagation()
+  event.preventDefault()
   isResizing.value = true
   dragStart.value = { x: event.clientX, y: event.clientY }
   initialSize.value = { ...props.table.size }
@@ -274,6 +276,13 @@ const handleResizeEnd = () => {
   font-size: 11px;
   font-family: 'Courier New', monospace;
 }
+.table-node, .table-node * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 
 .pk-icon, .fk-icon {
   font-size: 12px;
