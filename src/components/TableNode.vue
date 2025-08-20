@@ -19,6 +19,10 @@ const emit = defineEmits<Emits>()
 
 const headerHeight = 32
 const rowHeight = 24
+// 연결 핸들/타입 텍스트 간격 관리 상수
+const connectHandleOffset = 6
+const connectHandleRadius = 4
+const typeTextGapToHandle = 8
 const hoveredColumnId = ref<string | null>(null)
 
 // 연결 핸들 클릭/드래그 시작
@@ -233,21 +237,20 @@ const handleResizeEnd = () => {
 
         <!-- 컬럼 타입 -->
         <text
-          :x="table.position.x + table.size.width - 8"
+          :x="table.position.x + table.size.width - (connectHandleOffset + connectHandleRadius + typeTextGapToHandle)"
           :y="table.position.y + headerHeight + index * rowHeight + rowHeight / 2"
           text-anchor="end"
           dominant-baseline="middle"
           class="column-type"
-          fill="#666"
         >
           {{ column.type }}
         </text>
 
         <!-- 연결 핸들 -->
         <circle
-          :cx="table.position.x + table.size.width - 6"
+          :cx="table.position.x + table.size.width - connectHandleOffset"
           :cy="table.position.y + headerHeight + index * rowHeight + rowHeight / 2"
-          r="4"
+          :r="connectHandleRadius"
           class="connect-handle"
           @mousedown="startConnect($event, column.id)"
         />

@@ -423,7 +423,7 @@ const deleteRelationship = () => {
   color: white;
   border-radius: 50%;
   width: 24px;
-  height: 24px;
+  /* height: 24px; */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -445,7 +445,7 @@ const deleteRelationship = () => {
   border: none;
   border-radius: 50%;
   width: 24px;
-  height: 24px;
+  /* height: 24px; */
   cursor: pointer;
   font-size: 16px;
   display: flex;
