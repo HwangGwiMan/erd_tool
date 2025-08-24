@@ -259,10 +259,13 @@ onUnmounted(() => {
           </filter>
         </defs>
         
+        <!-- 무한 그리드 배경 (뷰포트 기반 동적 크기) -->
         <rect
           v-if="erdStore.canvas.showGrid"
-          width="100%"
-          height="100%"
+          :x="-erdStore.canvas.panX - canvasSize.width"
+          :y="-erdStore.canvas.panY - canvasSize.height"
+          :width="canvasSize.width * 3 / erdStore.canvas.zoom"
+          :height="canvasSize.height * 3 / erdStore.canvas.zoom"
           fill="url(#grid)"
         />
 
