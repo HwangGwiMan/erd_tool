@@ -23,7 +23,8 @@ export interface Column {
 
 export interface Table {
   id: string
-  name: string
+  logicalName: string    // 논리명 (한글 등 사용자 친화적 이름)
+  physicalName: string   // 물리명 (영문 등 실제 DB 테이블명)
   position: Position
   size: Size
   columns: Column[]

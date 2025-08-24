@@ -14,7 +14,8 @@ const relationshipForm = ref<Partial<Relationship>>({})
 watch(() => erdStore.selectedTable, (newTable) => {
   if (newTable) {
     tableForm.value = {
-      name: newTable.name,
+      logicalName: newTable.logicalName,
+      physicalName: newTable.physicalName,
       comment: newTable.comment
     }
   }
@@ -34,7 +35,8 @@ watch(() => erdStore.selectedRelationship, (newRelationship) => {
 const updateTable = () => {
   if (erdStore.selectedTableId && tableForm.value) {
     erdStore.updateTable(erdStore.selectedTableId, {
-      name: tableForm.value.name,
+      logicalName: tableForm.value.logicalName,
+      physicalName: tableForm.value.physicalName,
       comment: tableForm.value.comment
     })
   }
@@ -111,13 +113,23 @@ const deleteRelationship = () => {
       <div class="section">
         <h4>테이블 정보</h4>
         <div class="form-group">
-          <label>테이블명</label>
+          <label>논리명</label>
           <input
-            v-model="tableForm.name"
+            v-model="tableForm.logicalName"
             @blur="updateTable"
             type="text"
             class="form-input"
-            placeholder="테이블명을 입력하세요"
+            placeholder="논리명을 입력하세요 (예: 사용자)"
+          />
+        </div>
+        <div class="form-group">
+          <label>물리명</label>
+          <input
+            v-model="tableForm.physicalName"
+            @blur="updateTable"
+            type="text"
+            class="form-input"
+            placeholder="물리명을 입력하세요 (예: users)"
           />
         </div>
         <div class="form-group">

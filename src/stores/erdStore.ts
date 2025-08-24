@@ -55,7 +55,8 @@ export const useERDStore = defineStore('erd', () => {
   const addTable = (position: Position) => {
     const newTable: Table = {
       id: uuidv4(),
-      name: `Table_${tables.value.length + 1}`,
+      logicalName: `테이블 ${tables.value.length + 1}`,
+      physicalName: `table_${tables.value.length + 1}`,
       position: { ...position },
       size: { width: 200, height: 100 },
       columns: [
@@ -202,7 +203,8 @@ export const useERDStore = defineStore('erd', () => {
       name: 'ERD Document',
       tables: tables.value.map(t => ({
         id: t.id,
-        name: t.name,
+        logicalName: t.logicalName,
+        physicalName: t.physicalName,
         position: { ...t.position },
         size: { ...t.size },
         columns: t.columns.map(c => ({
@@ -243,7 +245,8 @@ export const useERDStore = defineStore('erd', () => {
       // 깊은 복제 및 보정
       const nextTables: Table[] = doc.tables.map(t => ({
         id: t.id,
-        name: t.name,
+        logicalName: (t as any).logicalName || (t as any).name || '테이블',
+        physicalName: (t as any).physicalName || (t as any).name || 'table',
         position: { ...t.position },
         size: { ...t.size },
         columns: t.columns.map(c => ({

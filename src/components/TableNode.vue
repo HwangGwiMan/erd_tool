@@ -167,7 +167,7 @@ const handleResizeEnd = () => {
       :stroke-width="isSelected ? 2 : 1"
     />
 
-    <!-- 테이블 이름 -->
+    <!-- 테이블 이름 (논리명 우선, 없으면 물리명) -->
     <text
       :x="table.position.x + table.size.width / 2"
       :y="table.position.y + headerHeight / 2"
@@ -176,7 +176,7 @@ const handleResizeEnd = () => {
       class="table-title"
       :fill="isSelected ? '#1976d2' : '#333'"
     >
-      {{ table.name }}
+      {{ table.logicalName || table.physicalName }}
     </text>
 
     <!-- 컬럼 목록 -->

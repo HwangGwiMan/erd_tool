@@ -119,6 +119,7 @@ const handleImportClick = () => {
 
 // 내보내기 처리
 const handleExport = () => {
+  console.log(erdStore.serializeERD)
   const doc = erdStore.serializeERD()
   const json = JSON.stringify({
     ...doc,
