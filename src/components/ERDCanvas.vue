@@ -29,9 +29,24 @@ const addNewTable = () => {
 
 // 캔버스 마우스 이벤트 처리
 const handleCanvasMouseDown = (event: MouseEvent) => {
-  if (event.target === svgCanvas.value || (event.target as Element).classList.contains('svg-canvas')) {
+  const target = event.target as Element
+  
+  // SVG 캔버스 내부인지 확인 (테이블이나 관계선이 아닌 빈 공간)
+  const isCanvasArea = target === svgCanvas.value || 
+                      target.classList.contains('svg-canvas') ||
+                      target.tagName === 'rect' // 그리드 배경
+  
+  // 휠 클릭(중간 버튼, button === 1) 또는 우클릭으로 패닝 시작
+  if ((event.button === 1 || event.button === 2)) {
+    event.preventDefault()
     isPanning.value = true
     lastPanPosition.value = { x: event.clientX, y: event.clientY }
+    if (isCanvasArea) {
+      erdStore.clearSelection()
+    }
+  }
+  // 좌클릭으로 빈 캔버스 클릭 시 선택 해제
+  else if (event.button === 0 && isCanvasArea) {
     erdStore.clearSelection()
   }
 }
@@ -119,7 +134,6 @@ const handleImportClick = () => {
 
 // 내보내기 처리
 const handleExport = () => {
-  console.log(erdStore.serializeERD)
   const doc = erdStore.serializeERD()
   const json = JSON.stringify({
     ...doc,
@@ -180,12 +194,6 @@ onUnmounted(() => {
       <button @click="addNewTable" class="btn-primary">
         테이블 추가
       </button>
-      <button @click="erdStore.zoomIn()" class="btn-secondary">
-        확대
-      </button>
-      <button @click="erdStore.zoomOut()" class="btn-secondary">
-        축소
-      </button>
       <button @click="erdStore.resetZoom()" class="btn-secondary">
         리셋
       </button>
@@ -198,10 +206,12 @@ onUnmounted(() => {
     <div 
       ref="canvasContainer" 
       class="canvas-container"
+      :class="{ panning: isPanning }"
       @mousedown="handleCanvasMouseDown"
       @mousemove="handleCanvasMouseMove"
       @mouseup="handleCanvasMouseUp"
       @wheel="handleWheel"
+      @contextmenu.prevent
     >
       <svg
         ref="svgCanvas"
@@ -363,6 +373,10 @@ onUnmounted(() => {
 
 .canvas-container:active {
   cursor: grabbing;
+}
+
+.canvas-container.panning {
+  cursor: grabbing !important;
 }
 
 .svg-canvas {
