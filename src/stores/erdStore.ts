@@ -194,6 +194,116 @@ export const useERDStore = defineStore('erd', () => {
     canvas.value.zoom = 1
   }
 
+  // 직렬화: 현재 상태를 ERDDocument(JSON 직렬화 가능 객체)로 변환
+  const serializeERD = (): import('@/types/erd').ERDDocument => {
+    const nowIso = new Date().toISOString()
+    return {
+      id: uuidv4(),
+      name: 'ERD Document',
+      tables: tables.value.map(t => ({
+        id: t.id,
+        name: t.name,
+        position: { ...t.position },
+        size: { ...t.size },
+        columns: t.columns.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          isPrimaryKey: c.isPrimaryKey,
+          isForeignKey: c.isForeignKey,
+          isNotNull: c.isNotNull,
+          defaultValue: c.defaultValue,
+          comment: c.comment
+        })),
+        comment: t.comment
+      })),
+      relationships: relationships.value.map(r => ({
+        id: r.id,
+        fromTableId: r.fromTableId,
+        toTableId: r.toTableId,
+        fromColumnId: r.fromColumnId,
+        toColumnId: r.toColumnId,
+        type: r.type,
+        label: r.label
+      })),
+      canvas: { ...canvas.value },
+      createdAt: new Date(nowIso),
+      updatedAt: new Date(nowIso)
+    }
+  }
+
+  // 역직렬화: 주어진 ERDDocument로 스토어 상태를 교체
+  const deserializeERD = (doc: import('@/types/erd').ERDDocument) => {
+    try {
+      // 기본 유효성 검사
+      if (!doc || !Array.isArray(doc.tables) || !Array.isArray(doc.relationships) || !doc.canvas) {
+        throw new Error('잘못된 파일 형식입니다.')
+      }
+
+      // 깊은 복제 및 보정
+      const nextTables: Table[] = doc.tables.map(t => ({
+        id: t.id,
+        name: t.name,
+        position: { ...t.position },
+        size: { ...t.size },
+        columns: t.columns.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          isPrimaryKey: !!c.isPrimaryKey,
+          isForeignKey: !!c.isForeignKey,
+          isNotNull: !!c.isNotNull,
+          defaultValue: c.defaultValue,
+          comment: c.comment
+        })),
+        comment: t.comment
+      }))
+
+      // 참조 무결성 확인을 위해 테이블/컬럼 ID 집합 생성
+      const tableIdSet = new Set(nextTables.map(t => t.id))
+      const columnIdSet = new Set<string>()
+      nextTables.forEach(t => t.columns.forEach(c => columnIdSet.add(c.id)))
+
+      // 관계 무결성 검증 및 정제
+      const nextRelationships: Relationship[] = doc.relationships.filter(r =>
+        tableIdSet.has(r.fromTableId) &&
+        tableIdSet.has(r.toTableId) &&
+        columnIdSet.has(r.fromColumnId) &&
+        columnIdSet.has(r.toColumnId)
+      ).map(r => ({
+        id: r.id,
+        fromTableId: r.fromTableId,
+        toTableId: r.toTableId,
+        fromColumnId: r.fromColumnId,
+        toColumnId: r.toColumnId,
+        type: r.type,
+        label: r.label
+      }))
+
+      // 캔버스 보정
+      const nextCanvas: CanvasSettings = {
+        zoom: doc.canvas.zoom ?? 1,
+        panX: doc.canvas.panX ?? 0,
+        panY: doc.canvas.panY ?? 0,
+        gridSize: doc.canvas.gridSize ?? 20,
+        showGrid: doc.canvas.showGrid ?? true
+      }
+
+      // 교체
+      tables.value = nextTables
+      relationships.value = nextRelationships
+      canvas.value = nextCanvas
+      selectedTableId.value = null
+      selectedRelationshipId.value = null
+
+      // 테이블 높이 보정
+      tables.value.forEach(ensureTableHeightFitsColumns)
+    } catch (err) {
+      console.error(err)
+      throw err
+    }
+  }
+
   // 선택 관련 액션
   const selectTable = (tableId: string | null) => {
     selectedTableId.value = tableId
@@ -305,6 +415,9 @@ export const useERDStore = defineStore('erd', () => {
     startConnect,
     updateConnectCursor,
     cancelConnect,
-    completeConnect
+    completeConnect,
+    // 직렬화 API
+    serializeERD,
+    deserializeERD
   }
 })

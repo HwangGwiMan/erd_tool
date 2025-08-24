@@ -90,6 +90,53 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
+// 파일 입력용 숨김 input
+const fileInput = document.createElement('input')
+fileInput.type = 'file'
+fileInput.accept = '.json,.erd.json,application/json'
+fileInput.style.display = 'none'
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const parsed = JSON.parse(text)
+    if (parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt)
+    if (parsed.updatedAt) parsed.updatedAt = new Date(parsed.updatedAt)
+    erdStore.deserializeERD(parsed)
+    alert('불러오기 완료')
+  } catch (e) {
+    console.error(e)
+    alert('불러오기 실패: 올바른 ERD JSON 파일이 아닙니다.')
+  } finally {
+    fileInput.value = ''
+  }
+})
+
+const handleImportClick = () => {
+  fileInput.click()
+}
+
+// 내보내기 처리
+const handleExport = () => {
+  const doc = erdStore.serializeERD()
+  const json = JSON.stringify({
+    ...doc,
+    createdAt: doc.createdAt.toISOString(),
+    updatedAt: doc.updatedAt.toISOString()
+  }, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  a.href = url
+  a.download = `ERD-${timestamp}.erd.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 // 테이블 이동 처리
 const handleTableMove = (tableId: string, position: Position) => {
   erdStore.moveTable(tableId, position)
@@ -141,6 +188,8 @@ onUnmounted(() => {
       <button @click="erdStore.resetZoom()" class="btn-secondary">
         리셋
       </button>
+      <button @click="handleImportClick" class="btn-secondary">불러오기</button>
+      <button @click="handleExport" class="btn-secondary">내보내기</button>
       <span class="zoom-info">{{ Math.round(erdStore.canvas.zoom * 100) }}%</span>
     </div>
 
